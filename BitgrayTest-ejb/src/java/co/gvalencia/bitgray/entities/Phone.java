@@ -62,9 +62,9 @@ public class Phone implements Serializable {
     @Column(name = "created_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date createdAt;
-    @Size(max = 45)
     @Column(name = "updated_at")
-    private String updatedAt;
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date updatedAt;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "phoneId", fetch = FetchType.LAZY)
     private List<Recharge> rechargeList;
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "phoneId", fetch = FetchType.LAZY)
@@ -139,11 +139,11 @@ public class Phone implements Serializable {
         this.createdAt = createdAt;
     }
 
-    public String getUpdatedAt() {
+    public Date getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(String updatedAt) {
+    public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
     }
 

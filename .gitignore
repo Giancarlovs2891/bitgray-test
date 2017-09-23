@@ -1,1 +1,7 @@
 /BitgrayTest-ejb/nbproject/private/
+/BitgrayTest-ejb/build/
+/BitgrayTest-ejb/dist/
+/build/
+/dist/
+/BitgrayTest-war/dist/
+/BitgrayTest-war/build/
