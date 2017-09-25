@@ -7,6 +7,7 @@ package co.gvalencia.bitgray.web.service;
 
 import co.gvalencia.bitgray.crud.PhoneEjb;
 import co.gvalencia.bitgray.crud.UserEJb;
+import co.gvalencia.bitgray.entities.CallHistory;
 import co.gvalencia.bitgray.entities.Phone;
 import co.gvalencia.bitgray.entities.Recharge;
 import co.gvalencia.bitgray.web.utils.Auth;
@@ -15,6 +16,7 @@ import javax.ejb.EJB;
 import javax.ejb.Stateless;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -40,6 +42,31 @@ public class PhoneRest {
 
     Response response;
 
+    @GET
+    @Path("{phoneNumber}")
+    @Produces("application/json")
+    public Response gegPhoneInfo(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, @PathParam("phoneNumber") String phoneNumber) {
+        Auth auth = new Auth(authString);
+        int login = userEJb.login(auth.getUsr(), auth.getPwd());
+        JSONObject obj = new JSONObject();
+        if (login == 200) {
+            Phone phone = phoneEjb.get(phoneNumber);
+            if (phone != null) {
+                response = Response.status(200).entity(phone).build();
+            } else {
+                obj.put("status", "error");
+                obj.put("msg", "Phone not found");
+                response = Response.status(404).entity(obj.toString()).build();
+            }
+        } else {
+            obj.put("status", "error");
+            obj.put("msg", "Unauthorized user");
+            response = Response.status(403).entity(obj.toString()).build();
+        }
+
+        return response;
+    }
+
     @POST
     @Path("create")
     @Consumes("application/json")
@@ -47,11 +74,20 @@ public class PhoneRest {
     public Response createPhone(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, Phone phone) {
         Auth auth = new Auth(authString);
         int login = userEJb.login(auth.getUsr(), auth.getPwd());
+        JSONObject obj = new JSONObject();
         if (login == 200) {
             phone = phoneEjb.create(phone);
             if (phone != null) {
                 response = Response.status(201).entity(phone).build();
+            } else {
+                obj.put("status", "error");
+                obj.put("msg", "Error while saving, phone number or device id duplicated");
+                response = Response.status(500).entity(obj.toString()).build();
             }
+        } else {
+            obj.put("status", "error");
+            obj.put("msg", "Unauthorized user");
+            response = Response.status(403).entity(obj.toString()).build();
         }
 
         return response;
@@ -61,7 +97,7 @@ public class PhoneRest {
     @Path("recharge/{phoneNumber}")
     @Consumes("application/json")
     @Produces("application/json")
-    public Response createPhone(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, @PathParam("phoneNumber") String phoneNumber, Recharge recharge) {
+    public Response rechargePhone(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, @PathParam("phoneNumber") String phoneNumber, Recharge recharge) {
         Auth auth = new Auth(authString);
         int login = userEJb.login(auth.getUsr(), auth.getPwd());
         JSONObject obj = new JSONObject();
@@ -85,6 +121,49 @@ public class PhoneRest {
                 response = Response.status(404).entity(obj.toString()).build();
             }
 
+        } else {
+            obj.put("status", "error");
+            obj.put("msg", "Unauthorized user");
+            response = Response.status(403).entity(obj.toString()).build();
+        }
+
+        return response;
+    }
+
+    @POST
+    @Path("call/start/{phoneNumber}/{phoneTo}")
+    @Produces("application/json")
+    public Response startCall(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, @PathParam("phoneNumber") String phoneNumber, @PathParam("phoneTo") String phoneTo) {
+        Auth auth = new Auth(authString);
+        int login = userEJb.login(auth.getUsr(), auth.getPwd());
+        JSONObject obj = new JSONObject();
+        if (login == 200) {
+            HashMap callHistory = phoneEjb.startCall(phoneNumber, phoneTo);
+            System.err.println(phoneNumber);
+            System.err.println(phoneTo);
+            response = Response.status((Integer) callHistory.get("status")).entity((CallHistory) callHistory.get("msg")).build();
+        } else {
+            obj.put("status", "error");
+            obj.put("msg", "Unauthorized user");
+            response = Response.status(403).entity(obj.toString()).build();
+        }
+
+        return response;
+    }
+    
+    @POST
+    @Path("call/end/{token}")
+    @Produces("application/json")
+    public Response endCall(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, @PathParam("token") String token) {
+        Auth auth = new Auth(authString);
+        int login = userEJb.login(auth.getUsr(), auth.getPwd());
+        JSONObject obj = new JSONObject();
+        if (login == 200) {
+            
+        } else {
+            obj.put("status", "error");
+            obj.put("msg", "Unauthorized user");
+            response = Response.status(403).entity(obj.toString()).build();
         }
 
         return response;

@@ -5,9 +5,11 @@
  */
 package co.gvalencia.bitgray.crud;
 
+import co.gvalencia.bitgray.entities.CallHistory;
 import co.gvalencia.bitgray.entities.Phone;
 import co.gvalencia.bitgray.entities.PricePerMinute;
 import co.gvalencia.bitgray.entities.Recharge;
+import java.security.SecureRandom;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -15,6 +17,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -45,13 +48,13 @@ public class PhoneImpl implements PhoneEjb {
                     + "WHERE p.number = :number";
             Query query = em.createQuery(queryStr);
             query.setParameter("number", number);
-            System.err.println("Lista "+query.getResultList());
-            if(query.getResultList().size()>0){
+            System.err.println("Lista " + query.getResultList());
+            if (query.getResultList().size() > 0) {
                 return (Phone) query.getResultList().get(0);
-            }else{
+            } else {
                 return null;
             }
-            
+
         } catch (Exception ex) {
             System.err.println(ex.getMessage());
             return null;
@@ -98,15 +101,15 @@ public class PhoneImpl implements PhoneEjb {
     @Override
     public HashMap recharge(Recharge recharge) {
         try {
-            
+
             Date date = new Date();
             Double bonus = getBonus10(recharge.getPhoneId(), recharge.getValue());
             int bonusOk = 0;
             HashMap<String, Integer> response = new HashMap<>();
-            if(bonus>recharge.getValue()){
-                bonusOk=1;
+            if (bonus > recharge.getValue()) {
+                bonusOk = 1;
                 response.put("bonus", 10);
-            }else {
+            } else {
                 response.put("bonus", 0);
             }
             recharge.setValue(bonus);
@@ -114,12 +117,11 @@ public class PhoneImpl implements PhoneEjb {
             em.persist(recharge);
             em.flush();
             Phone phone = recharge.getPhoneId();
-            int rechargedMinutes = recharge.getValue().intValue() / getPricePerMinute().intValue();
+            int rechargedMinutes = (recharge.getValue().intValue() / getPricePerMinute().intValue()) * 60; //Become recharge to seconds
             phone.setMinutesTotal(phone.getMinutesTotal() + rechargedMinutes);
             edit(phone);
             recharge.setPhoneId(phone);
-            
-            
+
             response.put("recharge", 201);
             return response;
         } catch (Exception ex) {
@@ -144,6 +146,36 @@ public class PhoneImpl implements PhoneEjb {
         }
     }
 
+    @Override
+    public HashMap startCall(String phoneNumber, String phoneTo) {
+        Phone phone = get(phoneNumber);
+        CallHistory callHistory = new CallHistory();
+        HashMap<String, Object> response = new HashMap<>();
+        if (phone != null) {
+            if (phone.getMinutesTotal() > phone.getMinutesUsed()) {
+                callHistory.setPhoneId(phone);
+                callHistory.setPhoneTo(phoneTo);
+                callHistory.setStartAt(new Date());
+                callHistory.setEndAt(null);
+                callHistory.setDuration(0);
+                callHistory.setToken(randomString(15));
+                em.persist(callHistory);
+                em.flush();
+                response.put("status", 201);
+                response.put("msg", callHistory);
+                return response;
+            } else {
+                response.put("status", 500);
+                response.put("msg", "No minutes left");
+                return response;
+            }
+        } else {
+            response.put("status", 404);
+            response.put("msg", "Phone not found");
+            return response;
+        }
+    }
+
     private Double getPricePerMinute() {
         try {
             String queryStr = "SELECT p FROM PricePerMinute p WHERE p.status=1";
@@ -159,13 +191,13 @@ public class PhoneImpl implements PhoneEjb {
     private Double getBonus10(Phone phone, Double value) {
         List<Recharge> recharges = rechargeList(phone.getId());
         Double averageRecharge = 0.0;
-        if (recharges.size()>0) {
+        if (recharges.size() > 0) {
             Date first = recharges.get(recharges.size() - 1).getCreatedAt();
             Date second = new Date();
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
             Boolean sameDate = sdf.format(first).equals(sdf.format(second));
             System.err.println(sameDate);
-            if (sameDate==false) {
+            if (sameDate == false) {
                 for (Recharge recharge : recharges) {
                     averageRecharge += recharge.getValue();
                 }
@@ -177,6 +209,18 @@ public class PhoneImpl implements PhoneEjb {
         }
 
         return value;
+    }
+
+    private String randomString(int length) {
+        char[] characterSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toCharArray();
+        Random random = new SecureRandom();
+        char[] result = new char[length];
+        for (int i = 0; i < result.length; i++) {
+            // picks a random index out of character set > random character
+            int randomCharIndex = random.nextInt(characterSet.length);
+            result[i] = characterSet[randomCharIndex];
+        }
+        return new String(result);
     }
 
 }

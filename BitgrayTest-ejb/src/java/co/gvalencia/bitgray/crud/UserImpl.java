@@ -32,10 +32,15 @@ public class UserImpl implements UserEJb{
             Query query = em.createQuery(queryStr);
             query.setParameter("username", username);
             query.setParameter("password", Encrypt.toMD5(password));
-            return 200;
+            if(query.getResultList().size()>0){
+                return 200;
+            }else{
+                return 404;
+            }
+            
         } catch (Exception ex) {
             System.err.println(ex.getMessage());
-            return 404;
+            return 500;
         }
     }
     

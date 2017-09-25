@@ -36,11 +36,7 @@ public class UserRest {
     public Response login(@Context HttpServletRequest request, @HeaderParam("authorization") String authString) {
         Auth auth = new Auth(authString);
         int login = userEJb.login(auth.getUsr(), auth.getPwd());
-        if (login == 200) {
-            response = Response.status(200).build();
-        } else {
-            response = Response.status(404).build();
-        }
+        response = Response.status(login).build();
         return response;
     }
 

@@ -5,3 +5,5 @@
 /dist/
 /BitgrayTest-war/dist/
 /BitgrayTest-war/build/
+/nbproject/private/
+/BitgrayTest-war/nbproject/private/

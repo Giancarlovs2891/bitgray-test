@@ -5,6 +5,7 @@
  */
 package co.gvalencia.bitgray.crud;
 
+import co.gvalencia.bitgray.entities.CallHistory;
 import co.gvalencia.bitgray.entities.Phone;
 import co.gvalencia.bitgray.entities.Recharge;
 import java.util.HashMap;
@@ -29,5 +30,7 @@ public interface PhoneEjb {
     HashMap recharge (Recharge recharge);
     
     List<Recharge> rechargeList(int phoneId);
+    
+    HashMap startCall (String phoneNumber, String phoneTo);
     
 }
