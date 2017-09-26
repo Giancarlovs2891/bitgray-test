@@ -10,15 +10,11 @@ import co.gvalencia.bitgray.entities.Phone;
 import co.gvalencia.bitgray.entities.PricePerMinute;
 import co.gvalencia.bitgray.entities.Recharge;
 import java.security.SecureRandom;
-import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
-import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.ejb.Stateless;
@@ -48,7 +44,6 @@ public class PhoneImpl implements PhoneEjb {
                     + "WHERE p.number = :number";
             Query query = em.createQuery(queryStr);
             query.setParameter("number", number);
-            System.err.println("Lista " + query.getResultList());
             if (query.getResultList().size() > 0) {
                 return (Phone) query.getResultList().get(0);
             } else {
@@ -96,6 +91,27 @@ public class PhoneImpl implements PhoneEjb {
     public Phone edit(Phone phone) {
         em.merge(phone);
         return phone;
+    }
+    
+    @Override
+    public int phoneAuth(String phoneNumber, String deviceId) {
+        try {
+            String queryStr = "SELECT p FROM Phone p "
+                    + "WHERE p.number = :number "
+                    + "AND p.deviceId = :deviceId";
+            Query query = em.createQuery(queryStr);
+            query.setParameter("number", phoneNumber);
+            query.setParameter("deviceId", deviceId);
+            if(query.getResultList().size()>0){
+                return 200;
+            }else{
+                return 404;
+            }
+            
+        } catch (Exception ex) {
+            System.err.println(ex.getMessage());
+            return 500;
+        }
     }
 
     @Override
@@ -146,6 +162,19 @@ public class PhoneImpl implements PhoneEjb {
         }
     }
 
+    public CallHistory getCall(String token) {
+        try {
+            String queryStr = "SELECT c FROM CallHistory c "
+                    + "WHERE c.token = :token";
+            Query query = em.createQuery(queryStr);
+            query.setParameter("token", token);
+            return (CallHistory) query.getResultList().get(0);
+        } catch (Exception ex) {
+            System.err.println(ex.getMessage());
+            return null;
+        }
+    }
+
     @Override
     public HashMap startCall(String phoneNumber, String phoneTo) {
         Phone phone = get(phoneNumber);
@@ -169,6 +198,36 @@ public class PhoneImpl implements PhoneEjb {
                 response.put("msg", "No minutes left");
                 return response;
             }
+        } else {
+            response.put("status", 404);
+            response.put("msg", "Phone not found");
+            return response;
+        }
+    }
+
+    @Override
+    public HashMap endCall(String token, int duration) {
+
+        CallHistory callHistory = getCall(token);
+        HashMap<String, Object> response = new HashMap<>();
+        if (callHistory != null) {
+            if (callHistory.getEndAt() == null) {
+                callHistory.setEndAt(new Date());
+                callHistory.setDuration(duration);
+                em.merge(callHistory);
+                Phone phone = get(callHistory.getPhoneId().getId());
+                phone.setMinutesUsed(phone.getMinutesUsed() + duration);
+                phone.setUpdatedAt(new Date());
+                em.merge(phone);
+                response.put("status", 200);
+                response.put("msg", callHistory);
+                return response;
+            }else{
+                response.put("status", 500);
+                response.put("msg", "Call already ended");
+                return response;
+            }
+
         } else {
             response.put("status", 404);
             response.put("msg", "Phone not found");

@@ -27,10 +27,14 @@ public interface PhoneEjb {
     
     Phone edit(Phone phone);
     
+    int phoneAuth (String phoneNumber, String deviceId);
+    
     HashMap recharge (Recharge recharge);
     
     List<Recharge> rechargeList(int phoneId);
     
     HashMap startCall (String phoneNumber, String phoneTo);
+    
+    HashMap endCall(String token, int duration);
     
 }

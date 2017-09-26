@@ -61,7 +61,7 @@ public class PhoneRest {
         } else {
             obj.put("status", "error");
             obj.put("msg", "Unauthorized user");
-            response = Response.status(403).entity(obj.toString()).build();
+            response = Response.status(401).entity(obj.toString()).build();
         }
 
         return response;
@@ -87,7 +87,7 @@ public class PhoneRest {
         } else {
             obj.put("status", "error");
             obj.put("msg", "Unauthorized user");
-            response = Response.status(403).entity(obj.toString()).build();
+            response = Response.status(401).entity(obj.toString()).build();
         }
 
         return response;
@@ -124,46 +124,79 @@ public class PhoneRest {
         } else {
             obj.put("status", "error");
             obj.put("msg", "Unauthorized user");
-            response = Response.status(403).entity(obj.toString()).build();
+            response = Response.status(401).entity(obj.toString()).build();
         }
 
         return response;
     }
 
     @POST
-    @Path("call/start/{phoneNumber}/{phoneTo}")
+    @Path("call/start")
     @Produces("application/json")
-    public Response startCall(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, @PathParam("phoneNumber") String phoneNumber, @PathParam("phoneTo") String phoneTo) {
+    public Response startCall(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, CallHistory call) {
         Auth auth = new Auth(authString);
-        int login = userEJb.login(auth.getUsr(), auth.getPwd());
+        int phoneAuth = phoneEjb.phoneAuth(auth.getUsr(), auth.getPwd());
         JSONObject obj = new JSONObject();
-        if (login == 200) {
-            HashMap callHistory = phoneEjb.startCall(phoneNumber, phoneTo);
-            System.err.println(phoneNumber);
-            System.err.println(phoneTo);
-            response = Response.status((Integer) callHistory.get("status")).entity((CallHistory) callHistory.get("msg")).build();
+        if (phoneAuth == 200) {
+            HashMap callHistory = phoneEjb.startCall(auth.getUsr(), call.getPhoneTo());
+            int status = (Integer) callHistory.get("status");
+            switch (status) {
+                case 201:
+                    response = Response.status(401).entity((CallHistory) callHistory.get("msg")).build();
+                    break;
+
+                case 404:
+                    obj.put("status", "error");
+                    obj.put("msg", "Phone not found");
+                    response = Response.status(404).entity(obj.toString()).build();
+                    break;
+
+                case 500:
+                    obj.put("status", "error");
+                    obj.put("msg", "Try again");
+                    response = Response.status(500).entity(obj.toString()).build();
+                    break;
+            }
         } else {
             obj.put("status", "error");
-            obj.put("msg", "Unauthorized user");
-            response = Response.status(403).entity(obj.toString()).build();
+            obj.put("msg", "Unauthorized phone");
+            response = Response.status(401).entity(obj.toString()).build();
         }
 
         return response;
     }
-    
+
     @POST
-    @Path("call/end/{token}")
+    @Path("call/end")
     @Produces("application/json")
-    public Response endCall(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, @PathParam("token") String token) {
+    public Response endCall(@Context HttpServletRequest request, @HeaderParam("authorization") String authString, CallHistory callHistory) {
         Auth auth = new Auth(authString);
-        int login = userEJb.login(auth.getUsr(), auth.getPwd());
+        int phoneAuth = phoneEjb.phoneAuth(auth.getUsr(), auth.getPwd());
         JSONObject obj = new JSONObject();
-        if (login == 200) {
-            
+        if (phoneAuth == 200) {
+            HashMap callEnd = phoneEjb.endCall(callHistory.getToken(), callHistory.getDuration());
+            int status = (Integer) callEnd.get("status");
+            switch (status) {
+                case 200:
+                    response = Response.status(401).entity((CallHistory) callEnd.get("msg")).build();
+                    break;
+
+                case 404:
+                    obj.put("status", "error");
+                    obj.put("msg", "Phone not found");
+                    response = Response.status(404).entity(obj.toString()).build();
+                    break;
+
+                case 500:
+                    obj.put("status", "error");
+                    obj.put("msg", "Call already ended");
+                    response = Response.status(500).entity(obj.toString()).build();
+                    break;
+            }
         } else {
             obj.put("status", "error");
-            obj.put("msg", "Unauthorized user");
-            response = Response.status(403).entity(obj.toString()).build();
+            obj.put("msg", "Unauthorized phone");
+            response = Response.status(401).entity(obj.toString()).build();
         }
 
         return response;
